@@ -477,7 +477,6 @@ export default function App() {
   // Calculations
   const completedCount = todayTasks.filter(t => t.completed).length;
   const incompleteCount = todayTasks.length - completedCount;
-  const progressPercent = todayTasks.length > 0 ? Math.round((completedCount / todayTasks.length) * 100) : 0;
 
   return (
     <div 
@@ -620,17 +619,6 @@ export default function App() {
         {/* TAB 1: 今日待办 */}
         {activeTab === 'today' && (
           <>
-            {/* Progress Bar */}
-            <div className="progress-container">
-              <div className="progress-info">
-                <span>今日完成度</span>
-                <span>{completedCount} / {todayTasks.length} ({progressPercent}%)</span>
-              </div>
-              <div className="progress-track">
-                <div className="progress-fill" style={{ width: `${progressPercent}%` }}></div>
-              </div>
-            </div>
-
             {/* Quick Add Form */}
             {!isLocked && (
               <form onSubmit={addTodayTask} className="task-input-bar no-drag">
