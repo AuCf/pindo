@@ -3,25 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PinDo - 极简桌面悬浮待办便签 (官方网站)</title>
-  <meta name="description" content="PinDo 是一款基于 Tauri + React 开发的极简桌面悬浮待办便签工具。不占任务栏、常驻置顶、支持一键折叠胶囊与透明度调节。">
-  
+  <title>PinDo - 极简桌面悬浮待办便签</title>
+  <meta name="description" content="PinDo 是一款不占任务栏、常驻最上方、支持一键折叠为迷你胶囊与透明度调节的桌面极简悬浮待办便签。">
+
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
-  
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
   <style>
     :root {
-      --bg-gradient: radial-gradient(circle at 50% 0%, #1e2030 0%, #0d0e15 100%);
-      --card-bg: rgba(255, 255, 255, 0.04);
-      --card-border: rgba(255, 255, 255, 0.1);
-      --card-hover: rgba(255, 255, 255, 0.08);
-      --accent-color: #6366f1;
-      --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-      --text-main: #f3f4f6;
-      --text-muted: #9ca3af;
-      --radius: 16px;
+      --bg-main: #090a0f;
+      --bg-surface: #12131b;
+      --bg-card: rgba(255, 255, 255, 0.03);
+      --bg-card-hover: rgba(255, 255, 255, 0.06);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-bright: rgba(255, 255, 255, 0.18);
+      
+      --accent: #38bdf8;
+      --accent-bright: #0284c7;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
     }
 
     * {
@@ -31,529 +38,562 @@
     }
 
     body {
-      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #0d0e15;
-      background-image: var(--bg-gradient);
-      color: var(--text-main);
-      min-height: 100vh;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-primary);
       line-height: 1.6;
       overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* Container */
+    /* Ambient Glow Background */
+    .ambient-light {
+      position: absolute;
+      top: -150px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, rgba(9, 10, 15, 0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
     .container {
-      max-width: 1100px;
+      max-width: 1080px;
       margin: 0 auto;
       padding: 0 24px;
+      position: relative;
+      z-index: 1;
     }
 
-    /* Navbar */
-    .navbar {
+    /* Navigation */
+    .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 24px 0;
+      padding: 28px 0;
     }
 
-    .brand {
+    .logo-group {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       text-decoration: none;
     }
 
-    .brand-logo {
-      width: 36px;
-      height: 36px;
-      background: var(--accent-gradient);
-      border-radius: 10px;
+    .logo-box {
+      width: 38px;
+      height: 38px;
+      background: #1c202b;
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius-md);
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     }
 
-    .brand-logo svg {
-      width: 20px;
-      height: 20px;
-      fill: #fff;
+    .logo-box svg {
+      width: 22px;
+      height: 22px;
     }
 
-    .brand-name {
-      font-family: 'Outfit', sans-serif;
+    .logo-text {
       font-weight: 800;
-      font-size: 22px;
-      background: linear-gradient(90deg, #fff 0%, #cbd5e1 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      font-size: 20px;
+      letter-spacing: -0.5px;
+      color: #fff;
+    }
+
+    .logo-version {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
     }
 
     .nav-links {
       display: flex;
-      gap: 20px;
+      gap: 24px;
       align-items: center;
     }
 
-    .nav-link {
-      color: var(--text-muted);
+    .nav-a {
+      color: var(--text-secondary);
       text-decoration: none;
       font-size: 14px;
       font-weight: 500;
-      transition: color 0.2s;
+      transition: color 0.15s;
     }
 
-    .nav-link:hover {
-      color: var(--text-main);
+    .nav-a:hover {
+      color: #fff;
     }
 
     /* Hero Section */
     .hero {
-      padding: 60px 0 80px;
+      padding: 70px 0 60px;
       text-align: center;
-      position: relative;
     }
 
-    .hero-badge {
+    .pill-tag {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 16px;
-      background: rgba(99, 102, 241, 0.15);
-      border: 1px solid rgba(99, 102, 241, 0.3);
+      gap: 8px;
+      padding: 6px 14px;
       border-radius: 30px;
-      color: #818cf8;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
       font-size: 13px;
-      font-weight: 600;
+      color: var(--text-secondary);
       margin-bottom: 24px;
     }
 
-    .hero-title {
-      font-family: 'Outfit', sans-serif;
-      font-size: 52px;
-      font-weight: 800;
-      line-height: 1.15;
-      margin-bottom: 20px;
-      letter-spacing: -1px;
-      background: linear-gradient(180deg, #ffffff 0%, #94a3b8 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
     }
 
-    .hero-desc {
+    .hero-h1 {
+      font-size: 56px;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -1.5px;
+      margin-bottom: 20px;
+      color: #ffffff;
+    }
+
+    .hero-h1 span {
+      color: var(--accent);
+    }
+
+    .hero-p {
       font-size: 18px;
-      color: var(--text-muted);
-      max-width: 640px;
-      margin: 0 auto 36px;
+      color: var(--text-secondary);
+      max-width: 620px;
+      margin: 0 auto 40px;
       font-weight: 400;
     }
 
-    /* Smart Download Button Section */
-    .download-cta-box {
+    /* Download Widget */
+    .cta-wrapper {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 16px;
-      margin-bottom: 50px;
+      gap: 14px;
+      margin-bottom: 60px;
     }
 
-    .primary-btn {
+    .download-btn-main {
       display: inline-flex;
       align-items: center;
       gap: 12px;
       padding: 16px 36px;
-      background: var(--accent-gradient);
-      border-radius: 40px;
-      color: #fff;
-      font-size: 16px;
+      background: #f8fafc;
+      color: #0f172a;
+      border-radius: 30px;
       font-weight: 700;
+      font-size: 15px;
       text-decoration: none;
-      box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
-      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 10px 30px rgba(255, 255, 255, 0.15);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    .primary-btn:hover {
+    .download-btn-main:hover {
+      background: #ffffff;
       transform: translateY(-2px);
-      box-shadow: 0 14px 36px rgba(99, 102, 241, 0.55);
+      box-shadow: 0 14px 40px rgba(255, 255, 255, 0.25);
     }
 
-    .btn-badge {
-      background: rgba(255, 255, 255, 0.2);
-      padding: 2px 8px;
-      border-radius: 12px;
+    .download-btn-main svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    .os-badge {
       font-size: 11px;
+      background: #e2e8f0;
+      color: #0f172a;
+      padding: 2px 8px;
+      border-radius: 10px;
       font-weight: 600;
     }
 
-    .detected-os-tip {
+    .os-info-text {
       font-size: 13px;
       color: var(--text-muted);
     }
 
-    /* Preview Image Showcase */
-    .preview-showcase {
-      margin-top: 20px;
+    /* Screenshot Container */
+    .screenshot-wrap {
+      margin-top: 10px;
       position: relative;
       display: inline-block;
     }
 
-    .preview-frame {
-      border-radius: 20px;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--card-border);
-      max-width: 360px;
+    .app-img {
+      max-width: 380px;
       width: 100%;
-      height: auto;
+      border-radius: 16px;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--border-bright);
       transition: transform 0.3s ease;
     }
 
-    .preview-frame:hover {
-      transform: translateY(-4px) scale(1.01);
+    .app-img:hover {
+      transform: translateY(-4px);
     }
 
-    /* Features Grid */
-    .features-section {
-      padding: 80px 0;
-      border-top: 1px solid var(--card-border);
+    /* Bento Grid Section */
+    .bento-section {
+      padding: 90px 0;
+      border-top: 1px solid var(--border);
     }
 
-    .section-header {
+    .bento-header {
       text-align: center;
-      margin-bottom: 50px;
+      margin-bottom: 56px;
     }
 
-    .section-title {
-      font-family: 'Outfit', sans-serif;
+    .bento-title {
       font-size: 32px;
-      font-weight: 700;
-      margin-bottom: 12px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 10px;
     }
 
-    .section-subtitle {
-      color: var(--text-muted);
-      font-size: 16px;
+    .bento-sub {
+      color: var(--text-secondary);
+      font-size: 15px;
     }
 
-    .grid-3 {
+    .bento-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 24px;
-    }
-
-    .feature-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius);
-      padding: 28px;
-      transition: background 0.2s, border-color 0.2s, transform 0.2s;
-    }
-
-    .feature-card:hover {
-      background: var(--card-hover);
-      border-color: rgba(255, 255, 255, 0.2);
-      transform: translateY(-3px);
-    }
-
-    .feature-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      background: rgba(99, 102, 241, 0.15);
-      color: #818cf8;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      margin-bottom: 18px;
-    }
-
-    .feature-card h3 {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 8px;
-    }
-
-    .feature-card p {
-      color: var(--text-muted);
-      font-size: 14px;
-      line-height: 1.6;
-    }
-
-    /* Downloads Grid Section */
-    .download-section {
-      padding: 80px 0;
-      border-top: 1px solid var(--card-border);
-    }
-
-    .download-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      grid-template-columns: repeat(3, 1fr);
       gap: 20px;
     }
 
-    .download-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius);
-      padding: 24px;
+    .bento-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .bento-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-bright);
+      transform: translateY(-2px);
+    }
+
+    .bento-icon-box {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+
+    .bento-card h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+
+    .bento-card p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Downloads Section */
+    .downloads-section {
+      padding: 90px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .download-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .dl-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px 24px;
       text-align: center;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      transition: all 0.2s;
+      transition: all 0.2s ease;
     }
 
-    .download-card.highlight {
-      border-color: var(--accent-color);
-      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.25);
+    .dl-card.highlight {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.04);
     }
 
-    .platform-title {
-      font-size: 20px;
+    .dl-platform {
+      font-size: 18px;
       font-weight: 700;
       margin-bottom: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+      color: #fff;
     }
 
-    .platform-desc {
-      color: var(--text-muted);
+    .dl-desc {
       font-size: 13px;
-      margin-bottom: 20px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
     }
 
-    .sub-btn {
-      display: inline-block;
-      width: 100%;
-      padding: 12px 16px;
-      border-radius: 10px;
+    .dl-btn {
+      display: block;
+      padding: 12px;
+      border-radius: var(--radius-md);
       background: rgba(255, 255, 255, 0.08);
       color: #fff;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
       text-decoration: none;
-      transition: background 0.2s;
+      transition: background 0.15s;
+      border: 1px solid var(--border);
     }
 
-    .sub-btn:hover {
+    .dl-btn:hover {
       background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 255, 255, 0.25);
     }
 
     /* Footer */
     footer {
       padding: 40px 0;
-      border-top: 1px solid var(--card-border);
+      border-top: 1px solid var(--border);
       text-align: center;
+      font-size: 13px;
       color: var(--text-muted);
-      font-size: 14px;
     }
 
     footer a {
-      color: var(--text-main);
+      color: var(--text-secondary);
       text-decoration: none;
     }
 
-    /* Responsive */
-    @media (max-width: 768px) {
-      .hero-title {
-        font-size: 36px;
+    footer a:hover {
+      color: #fff;
+    }
+
+    @media (max-width: 900px) {
+      .bento-grid, .download-cards-grid {
+        grid-template-columns: 1fr;
       }
-      .hero-desc {
-        font-size: 15px;
+      .hero-h1 {
+        font-size: 38px;
       }
     }
   </style>
 </head>
 <body>
+  <div class="ambient-light"></div>
 
   <div class="container">
-    <!-- Navbar -->
-    <header class="navbar">
-      <a href="#" class="brand">
-        <div class="brand-logo">
+    <!-- Header -->
+    <header class="header">
+      <a href="#" class="logo-group">
+        <div class="logo-box">
           <svg viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#20252b"/><path d="M30.4 50 41.4 43v16.3c0 1.7-2 2.7-3.3 1.5l-7.7-7.3a2.3 2.3 0 0 1 0-3.5Z" fill="#4c6fff"/><path fill="#f2efe7" fill-rule="evenodd" d="M17 50.8V25.5c0-8.7 6.8-14.4 16.1-14.4h9.1c9.5 0 15.3 5.4 15.3 13.9 0 7.4-4.2 12.3-11.7 16.9l-14.2 8.8 8.7 8.2c1.5 1.4.6 3.8-1.4 3.8-1.2 0-2.4-.3-3.5-.9l-13.1-6.5C18.9 53.6 17 52.5 17 50.8Zm9.1-25.9c-4 0-6.6 2.2-6.6 5.7v9.2l10.6-6.6h12c3.7 0 5.9-1.9 5.9-4.8 0-2.2-1.5-3.5-4.4-3.5H26.1Z"/></svg>
         </div>
-        <span class="brand-name">PinDo</span>
+        <span class="logo-text">PinDo</span>
+        <span class="logo-version">v0.0.1</span>
       </a>
 
       <nav class="nav-links">
-        <a href="#features" class="nav-link">功能特色</a>
-        <a href="#download" class="nav-link">下载专区</a>
-        <a href="https://github.com/your-username/PinDo" target="_blank" class="nav-link">GitHub 源码</a>
+        <a href="#features" class="nav-a">特性</a>
+        <a href="#downloads" class="nav-a">下载</a>
+        <a href="https://github.com/AuCf/pindo" target="_blank" class="nav-a">GitHub</a>
       </nav>
     </header>
 
-    <!-- Hero Section -->
+    <!-- Hero -->
     <section class="hero">
-      <div class="hero-badge">✨ 基于 Tauri 2.0 + React 极致轻量开发</div>
-      <h1 class="hero-title">📌 PinDo 桌面悬浮待办便签</h1>
-      <p class="hero-desc">不占任务栏、常驻最上方、支持一键折叠胶囊与透明度调节。专为开发者与办公人群打造的极简随手记。</p>
+      <div class="pill-tag">
+        <span class="pill-dot"></span>
+        Tauri 2.0 原生构建 · 仅占用 30MB 内存
+      </div>
 
-      <!-- Smart Download CTA -->
-      <div class="download-cta-box">
-        <a href="#" id="smart-download-btn" class="primary-btn">
+      <h1 class="hero-h1">钉在桌面上，<span>随手即记</span></h1>
+      <p class="hero-p">不占用系统任务栏、常驻窗口最上方、一键折叠迷你胶囊。让待办清单与备忘随时触手可及。</p>
+
+      <div class="cta-wrapper">
+        <a href="#" id="main-dl-btn" class="download-btn-main">
           <span id="btn-icon">⚡</span>
           <span id="btn-text">获取 PinDo 最新版</span>
-          <span id="btn-badge" class="btn-badge">自动识别</span>
+          <span id="btn-badge" class="os-badge">全平台</span>
         </a>
-        <p class="detected-os-tip" id="os-tip-text">正在识别您的操作系统...</p>
+        <span class="os-info-text" id="os-tip-text">正在自动识别系统...</span>
       </div>
 
-      <!-- Preview Image -->
-      <div class="preview-showcase">
-        <img src="./preview.png" alt="PinDo 界面预览图" class="preview-frame">
+      <div class="screenshot-wrap">
+        <img src="./preview.png" alt="PinDo 悬浮效果预览图" class="app-img">
       </div>
     </section>
 
-    <!-- Features Section -->
-    <section class="features-section" id="features">
-      <div class="section-header">
-        <h2 class="section-title">核心设计亮点</h2>
-        <p class="section-subtitle">专注、高效、零阻碍的桌面任务管理体验</p>
+    <!-- Features Bento Grid -->
+    <section class="bento-section" id="features">
+      <div class="bento-header">
+        <h2 class="bento-title">为专注工作量身定制</h2>
+        <p class="bento-sub">拒绝繁琐与遮挡，极简随手记体验</p>
       </div>
 
-      <div class="grid-3">
-        <div class="feature-card">
-          <div class="feature-icon">🚫</div>
-          <h3>无任务栏图标 (Skip Taskbar)</h3>
-          <p>完全隐藏在 Windows 系统任务栏及 Alt+Tab 列表中，不占用任务栏窗口空间，仅驻留托盘。</p>
+      <div class="bento-grid">
+        <div class="bento-card">
+          <div class="bento-icon-box">🚫</div>
+          <h3>无任务栏图标</h3>
+          <p>窗口运行与最小化时，完全不在 Windows 系统任务栏显示图标，不打扰主应用专注度。</p>
         </div>
 
-        <div class="feature-card">
-          <div class="feature-icon">📌</div>
+        <div class="bento-card">
+          <div class="bento-icon-box">📌</div>
           <h3>常驻置顶与防误触锁定</h3>
-          <p>始终悬浮在所有代码编辑器、浏览器上方。一键锁定后隐藏全部控件，防止误拖拽或误操作。</p>
+          <p>始终固定悬浮在所有应用上方。一键锁定后隐藏控制栏与拖拽，防止编码时误触。</p>
         </div>
 
-        <div class="feature-card">
-          <div class="feature-icon">↕️</div>
+        <div class="bento-card">
+          <div class="bento-icon-box">↕️</div>
           <h3>一键折叠为迷你胶囊</h3>
-          <p>双击标题栏，瞬间收起为 42px 极简迷你栏（并显示今日未完成任务数），再次双击还原。</p>
+          <p>双击标题栏，瞬间收起为 42px 迷你栏并实时显示未完成任务数量，随时恢复展开。</p>
         </div>
 
-        <div class="feature-card">
-          <div class="feature-icon">🎚️</div>
-          <h3>透明度滑块与毛玻璃</h3>
-          <p>支持 30% ~ 100% 不透明度实时滑动调节，极佳的高颜值 Dark Glassmorphism 视觉呈现。</p>
+        <div class="bento-card">
+          <div class="bento-icon-box">🎚️</div>
+          <h3>透明度自由调节</h3>
+          <p>支持 30% ~ 100% 不透明度实时滑块微调，融合暗黑磨砂毛玻璃视觉。</p>
         </div>
 
-        <div class="feature-card">
-          <div class="feature-icon">📝</div>
+        <div class="bento-card">
+          <div class="bento-icon-box">📝</div>
           <h3>今日待办 & 明日计划</h3>
-          <p>支持任务紧急度标记（🔴/🟡/🔵）、完成打勾划线动画、双击文本内联编辑与“一键归档移至明日”。</p>
+          <p>任务紧急度标记（🔴/🟡/🔵）、完成划线打勾动画、双击文本内联编辑与一键归档。</p>
         </div>
 
-        <div class="feature-card">
-          <div class="feature-icon">💾</div>
-          <h3>SQLite 本地原生硬核存储</h3>
-          <p>使用 Tauri SQLite 原生插件存储数据，随写随存，零延迟持久化，重启电脑绝对不丢任务。</p>
+        <div class="bento-card">
+          <div class="bento-icon-box">💾</div>
+          <h3>SQLite 原生硬盘持久化</h3>
+          <p>数据使用 SQLite 原生存取，随写随存，重启电脑零丢失，无需手动保存。</p>
         </div>
       </div>
     </section>
 
-    <!-- Download Section for All Platforms -->
-    <section class="download-section" id="download">
-      <div class="section-header">
-        <h2 class="section-title">全平台客户端下载</h2>
-        <p class="section-subtitle">支持 Windows 与 macOS (包含 Apple Silicon M 芯片与 Intel 芯片)</p>
+    <!-- Downloads Section -->
+    <section class="downloads-section" id="downloads">
+      <div class="bento-header">
+        <h2 class="bento-title">全平台原生下载</h2>
+        <p class="bento-sub">支持 Windows 10/11、Mac M 芯片及 Mac Intel 芯片</p>
       </div>
 
-      <div class="download-grid">
-        <!-- Windows -->
-        <div class="download-card" id="card-win">
+      <div class="download-cards-grid">
+        <div class="dl-card" id="card-win">
           <div>
-            <div class="platform-title">🪟 Windows</div>
-            <p class="platform-desc">支持 Windows 10 / 11 (64位)</p>
+            <div class="dl-platform">🪟 Windows</div>
+            <p class="dl-desc">Windows 10 / 11 (64位)</p>
           </div>
-          <a href="https://github.com/your-username/PinDo/releases/latest" class="sub-btn" target="_blank">下载 .exe 安装包</a>
+          <a href="https://github.com/AuCf/pindo/releases/latest" class="dl-btn" target="_blank">下载 .exe 安装包</a>
         </div>
 
-        <!-- Mac M Series -->
-        <div class="download-card" id="card-mac-m">
+        <div class="dl-card" id="card-mac-m">
           <div>
-            <div class="platform-title">🍎 Mac M 芯片</div>
-            <p class="platform-desc">原生适配 M1 / M2 / M3 / M4 芯片</p>
+            <div class="dl-platform">🍎 Mac M 芯片</div>
+            <p class="dl-desc">Apple Silicon (M1/M2/M3/M4 原生)</p>
           </div>
-          <a href="https://github.com/your-username/PinDo/releases/latest" class="sub-btn" target="_blank">下载 .dmg (Arm64)</a>
+          <a href="https://github.com/AuCf/pindo/releases/latest" class="dl-btn" target="_blank">下载 .dmg (Arm64)</a>
         </div>
 
-        <!-- Mac Intel -->
-        <div class="download-card" id="card-mac-intel">
+        <div class="dl-card" id="card-mac-intel">
           <div>
-            <div class="platform-title">🍏 Mac Intel 芯片</div>
-            <p class="platform-desc">适用于 Intel 架构的 Mac 电脑</p>
+            <div class="dl-platform">🍏 Mac Intel 芯片</div>
+            <p class="dl-desc">适用于 Intel 架构 Mac 电脑</p>
           </div>
-          <a href="https://github.com/your-username/PinDo/releases/latest" class="sub-btn" target="_blank">下载 .dmg (x64)</a>
+          <a href="https://github.com/AuCf/pindo/releases/latest" class="dl-btn" target="_blank">下载 .dmg (x64)</a>
         </div>
       </div>
     </section>
 
     <!-- Footer -->
     <footer>
-      <p>PinDo 极简悬浮便签 &copy; 2026 基于 <a href="https://github.com/your-username/PinDo" target="_blank">MIT License</a> 开源</p>
+      <p>PinDo &copy; 2026 基于 <a href="https://github.com/AuCf/pindo" target="_blank">MIT License</a> 开源代码库</p>
     </footer>
   </div>
 
-  <!-- Smart Platform Detection Script -->
+  <!-- Detection JS -->
   <script>
-    (function detectPlatform() {
+    (function () {
       const ua = navigator.userAgent.toLowerCase();
       const platform = navigator.platform.toLowerCase();
-      
-      const smartBtn = document.getElementById('smart-download-btn');
+      const GITHUB_RELEASE = "https://github.com/AuCf/pindo/releases/latest";
+
+      const btn = document.getElementById('main-dl-btn');
       const btnText = document.getElementById('btn-text');
       const btnIcon = document.getElementById('btn-icon');
       const btnBadge = document.getElementById('btn-badge');
       const osTip = document.getElementById('os-tip-text');
 
-      const GITHUB_RELEASES = "https://github.com/your-username/PinDo/releases/latest";
-
-      let isWin = ua.includes('win');
-      let isMac = ua.includes('mac') || platform.includes('mac');
-
-      if (isWin) {
+      if (ua.includes('win')) {
         btnIcon.textContent = '🪟';
         btnText.textContent = '下载 Windows 版 (.exe)';
-        btnBadge.textContent = '推荐系统';
-        osTip.textContent = '已检测到您的系统为 Windows 64位';
-        smartBtn.href = GITHUB_RELEASES;
+        btnBadge.textContent = 'x64';
+        osTip.textContent = '检测到您的系统为 Windows 64位';
+        btn.href = GITHUB_RELEASE;
         document.getElementById('card-win')?.classList.add('highlight');
-      } else if (isMac) {
-        // Detect Apple Silicon (M1/M2/M3) vs Intel
-        let isAppleSilicon = false;
+      } else if (ua.includes('mac') || platform.includes('mac')) {
+        let isMChip = false;
         try {
           const canvas = document.createElement('canvas');
-          const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+          const gl = canvas.getContext('webgl');
           if (gl) {
             const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
             const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL).toLowerCase();
-            if (renderer.includes('apple') || renderer.includes('m1') || renderer.includes('m2') || renderer.includes('m3') || renderer.includes('m4')) {
-              isAppleSilicon = true;
-            }
+            if (renderer.includes('apple')) isMChip = true;
           }
         } catch (e) {}
 
-        if (isAppleSilicon) {
+        if (isMChip) {
           btnIcon.textContent = '🍎';
           btnText.textContent = '下载 Mac 版 (M芯片 .dmg)';
           btnBadge.textContent = 'Apple Silicon';
-          osTip.textContent = '已检测到您的系统为 macOS (M 系列芯片)';
-          smartBtn.href = GITHUB_RELEASES;
+          osTip.textContent = '检测到您的系统为 macOS (M1/M2/M3/M4 芯片)';
+          btn.href = GITHUB_RELEASE;
           document.getElementById('card-mac-m')?.classList.add('highlight');
         } else {
           btnIcon.textContent = '🍏';
           btnText.textContent = '下载 Mac 版 (Intel芯片 .dmg)';
           btnBadge.textContent = 'Intel 芯片';
-          osTip.textContent = '已检测到您的系统为 macOS (Intel 芯片)';
-          smartBtn.href = GITHUB_RELEASES;
+          osTip.textContent = '检测到您的系统为 macOS (Intel 芯片)';
+          btn.href = GITHUB_RELEASE;
           document.getElementById('card-mac-intel')?.classList.add('highlight');
         }
       } else {
         btnIcon.textContent = '⚡';
-        btnText.textContent = '跳转至最新版本下载页';
-        btnBadge.textContent = '多平台支持';
-        osTip.textContent = '支持 Windows、Mac Intel 及 Apple Silicon 平台';
-        smartBtn.href = GITHUB_RELEASES;
+        btnText.textContent = '获取最新版本';
+        btnBadge.textContent = 'Releases';
+        osTip.textContent = '支持 Windows 与 macOS 多架构平台';
+        btn.href = GITHUB_RELEASE;
       }
     })();
   </script>
