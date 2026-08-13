@@ -649,11 +649,12 @@
       animate();
     })();
 
-    // OS Detection Script
-    (function () {
+    // Direct File Download & OS Detection Script
+    (async function initDownloadsAndOsDetection() {
       const ua = navigator.userAgent.toLowerCase();
       const platform = navigator.platform.toLowerCase();
-      const GITHUB_RELEASE = "https://github.com/AuCf/pindo/releases/latest";
+      const REPO_RELEASES_PAGE = "https://github.com/AuCf/pindo/releases/latest";
+      const REPO_API = "https://api.github.com/repos/AuCf/pindo/releases/latest";
 
       const btn = document.getElementById('main-dl-btn');
       const btnText = document.getElementById('btn-text');
@@ -661,14 +662,55 @@
       const btnBadge = document.getElementById('btn-badge');
       const osTip = document.getElementById('os-tip-text');
 
-      if (ua.includes('win')) {
+      const cardWinBtn = document.querySelector('#card-win .dl-btn');
+      const cardMacMBtn = document.querySelector('#card-mac-m .dl-btn');
+      const cardMacIntelBtn = document.querySelector('#card-mac-intel .dl-btn');
+
+      // Default fallbacks
+      let winDownloadUrl = REPO_RELEASES_PAGE;
+      let macMDownloadUrl = REPO_RELEASES_PAGE;
+      let macIntelDownloadUrl = REPO_RELEASES_PAGE;
+
+      // Try fetching direct asset URLs from GitHub Releases API
+      try {
+        const response = await fetch(REPO_API);
+        if (response.ok) {
+          const data = await response.json();
+          const assets = data.assets || [];
+
+          // Find Windows installer file (.exe / .msi)
+          const winAsset = assets.find(a => a.name.endsWith('.exe')) || assets.find(a => a.name.endsWith('.msi'));
+          if (winAsset) winDownloadUrl = winAsset.browser_download_url;
+
+          // Find Mac Apple Silicon DMG (aarch64 / arm64)
+          const macMAsset = assets.find(a => (a.name.includes('aarch64') || a.name.includes('arm64')) && a.name.endsWith('.dmg'));
+          if (macMAsset) macMDownloadUrl = macMAsset.browser_download_url;
+
+          // Find Mac Intel DMG (x64 / x86_64)
+          const macIntelAsset = assets.find(a => (a.name.includes('x64') || a.name.includes('x86_64')) && !a.name.includes('aarch64') && a.name.endsWith('.dmg'));
+          if (macIntelAsset) macIntelDownloadUrl = macIntelAsset.browser_download_url;
+        }
+      } catch (err) {
+        console.log("Using release page fallback link");
+      }
+
+      // Update Card buttons to direct download files
+      if (cardWinBtn) cardWinBtn.href = winDownloadUrl;
+      if (cardMacMBtn) cardMacMBtn.href = macMDownloadUrl;
+      if (cardMacIntelBtn) cardMacIntelBtn.href = macIntelDownloadUrl;
+
+      // Detect OS & Update Hero CTA
+      let isWin = ua.includes('win');
+      let isMac = ua.includes('mac') || platform.includes('mac');
+
+      if (isWin) {
         btnIcon.textContent = '🪟';
-        btnText.textContent = '下载 Windows 版 (.exe)';
+        btnText.textContent = '直接下载 Windows 安装包 (.exe)';
         btnBadge.textContent = 'x64';
         osTip.textContent = '检测到您的系统为 Windows 64位';
-        btn.href = GITHUB_RELEASE;
+        btn.href = winDownloadUrl;
         document.getElementById('card-win')?.classList.add('highlight');
-      } else if (ua.includes('mac') || platform.includes('mac')) {
+      } else if (isMac) {
         let isMChip = false;
         try {
           const canvas = document.createElement('canvas');
@@ -682,25 +724,25 @@
 
         if (isMChip) {
           btnIcon.textContent = '🍎';
-          btnText.textContent = '下载 Mac 版 (M芯片 .dmg)';
+          btnText.textContent = '直接下载 Mac 版 (M芯片 .dmg)';
           btnBadge.textContent = 'Apple Silicon';
           osTip.textContent = '检测到您的系统为 macOS (M1/M2/M3/M4 芯片)';
-          btn.href = GITHUB_RELEASE;
+          btn.href = macMDownloadUrl;
           document.getElementById('card-mac-m')?.classList.add('highlight');
         } else {
           btnIcon.textContent = '🍏';
-          btnText.textContent = '下载 Mac 版 (Intel芯片 .dmg)';
+          btnText.textContent = '直接下载 Mac 版 (Intel芯片 .dmg)';
           btnBadge.textContent = 'Intel 芯片';
           osTip.textContent = '检测到您的系统为 macOS (Intel 芯片)';
-          btn.href = GITHUB_RELEASE;
+          btn.href = macIntelDownloadUrl;
           document.getElementById('card-mac-intel')?.classList.add('highlight');
         }
       } else {
         btnIcon.textContent = '⚡';
-        btnText.textContent = '获取最新版本';
-        btnBadge.textContent = 'Releases';
+        btnText.textContent = '直接下载最新版';
+        btnBadge.textContent = '全平台';
         osTip.textContent = '支持 Windows 与 macOS 多架构平台';
-        btn.href = GITHUB_RELEASE;
+        btn.href = winDownloadUrl;
       }
     })();
   </script>
