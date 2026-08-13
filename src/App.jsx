@@ -31,18 +31,9 @@ import {
 import { initializePindoDatabase, persistPindoState } from './data/pindoDatabase';
 import './App.css';
 
-const DEFAULT_TODAY_TASKS = [
-  { id: '1', text: '完成固定悬浮窗口与快捷按键开发', completed: true, priority: 'high' },
-  { id: '2', text: '记录今天核心要完成的功能列表', completed: false, priority: 'high' },
-  { id: '3', text: '规划明天的开发计划', completed: false, priority: 'med' }
-];
-
-const DEFAULT_TOMORROW_TASKS = [
-  { id: '101', text: '优化毛玻璃背景透明度与性能', priority: 'med' },
-  { id: '102', text: '测试开机自启与系统托盘恢复功能', priority: 'low' }
-];
-
-const DEFAULT_NOTES = '随手记\n在这里记录临时内容、链接或备忘。';
+const DEFAULT_TODAY_TASKS = [];
+const DEFAULT_TOMORROW_TASKS = [];
+const DEFAULT_NOTES = '';
 const DEFAULT_PREFERENCES = {
   activeTab: 'today',
   isAlwaysOnTop: true,
