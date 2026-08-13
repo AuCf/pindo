@@ -57,6 +57,6 @@ jobs:
           tagName: v__VERSION__
           releaseName: 'PinDo v__VERSION__'
           releaseBody: '📌 PinDo 极简桌面悬浮待办便签 (支持 Windows、Mac Intel 芯片及 Apple Silicon M 芯片)'
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
