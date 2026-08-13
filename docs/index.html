@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PinDo - 极简桌面悬浮待办便签 (官方网站)</title>
+  <meta name="description" content="PinDo 是一款基于 Tauri + React 开发的极简桌面悬浮待办便签工具。不占任务栏、常驻置顶、支持一键折叠胶囊与透明度调节。">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-gradient: radial-gradient(circle at 50% 0%, #1e2030 0%, #0d0e15 100%);
+      --card-bg: rgba(255, 255, 255, 0.04);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --card-hover: rgba(255, 255, 255, 0.08);
+      --accent-color: #6366f1;
+      --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0d0e15;
+      background-image: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Navbar */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      background: var(--accent-gradient);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+    }
+
+    .brand-logo svg {
+      width: 20px;
+      height: 20px;
+      fill: #fff;
+    }
+
+    .brand-name {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 22px;
+      background: linear-gradient(90deg, #fff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .nav-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-link:hover {
+      color: var(--text-main);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 60px 0 80px;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 16px;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 30px;
+      color: #818cf8;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+
+    .hero-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 52px;
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 20px;
+      letter-spacing: -1px;
+      background: linear-gradient(180deg, #ffffff 0%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-desc {
+      font-size: 18px;
+      color: var(--text-muted);
+      max-width: 640px;
+      margin: 0 auto 36px;
+      font-weight: 400;
+    }
+
+    /* Smart Download Button Section */
+    .download-cta-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 50px;
+    }
+
+    .primary-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 36px;
+      background: var(--accent-gradient);
+      border-radius: 40px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 36px rgba(99, 102, 241, 0.55);
+    }
+
+    .btn-badge {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .detected-os-tip {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    /* Preview Image Showcase */
+    .preview-showcase {
+      margin-top: 20px;
+      position: relative;
+      display: inline-block;
+    }
+
+    .preview-frame {
+      border-radius: 20px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--card-border);
+      max-width: 360px;
+      width: 100%;
+      height: auto;
+      transition: transform 0.3s ease;
+    }
+
+    .preview-frame:hover {
+      transform: translateY(-4px) scale(1.01);
+    }
+
+    /* Features Grid */
+    .features-section {
+      padding: 80px 0;
+      border-top: 1px solid var(--card-border);
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 50px;
+    }
+
+    .section-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .section-subtitle {
+      color: var(--text-muted);
+      font-size: 16px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 28px;
+      transition: background 0.2s, border-color 0.2s, transform 0.2s;
+    }
+
+    .feature-card:hover {
+      background: var(--card-hover);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-3px);
+    }
+
+    .feature-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(99, 102, 241, 0.15);
+      color: #818cf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin-bottom: 18px;
+    }
+
+    .feature-card h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* Downloads Grid Section */
+    .download-section {
+      padding: 80px 0;
+      border-top: 1px solid var(--card-border);
+    }
+
+    .download-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .download-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.2s;
+    }
+
+    .download-card.highlight {
+      border-color: var(--accent-color);
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.25);
+    }
+
+    .platform-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .platform-desc {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+
+    .sub-btn {
+      display: inline-block;
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+
+    .sub-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    /* Footer */
+    footer {
+      padding: 40px 0;
+      border-top: 1px solid var(--card-border);
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    footer a {
+      color: var(--text-main);
+      text-decoration: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero-title {
+        font-size: 36px;
+      }
+      .hero-desc {
+        font-size: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Navbar -->
+    <header class="navbar">
+      <a href="#" class="brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#20252b"/><path d="M30.4 50 41.4 43v16.3c0 1.7-2 2.7-3.3 1.5l-7.7-7.3a2.3 2.3 0 0 1 0-3.5Z" fill="#4c6fff"/><path fill="#f2efe7" fill-rule="evenodd" d="M17 50.8V25.5c0-8.7 6.8-14.4 16.1-14.4h9.1c9.5 0 15.3 5.4 15.3 13.9 0 7.4-4.2 12.3-11.7 16.9l-14.2 8.8 8.7 8.2c1.5 1.4.6 3.8-1.4 3.8-1.2 0-2.4-.3-3.5-.9l-13.1-6.5C18.9 53.6 17 52.5 17 50.8Zm9.1-25.9c-4 0-6.6 2.2-6.6 5.7v9.2l10.6-6.6h12c3.7 0 5.9-1.9 5.9-4.8 0-2.2-1.5-3.5-4.4-3.5H26.1Z"/></svg>
+        </div>
+        <span class="brand-name">PinDo</span>
+      </a>
+
+      <nav class="nav-links">
+        <a href="#features" class="nav-link">功能特色</a>
+        <a href="#download" class="nav-link">下载专区</a>
+        <a href="https://github.com/your-username/PinDo" target="_blank" class="nav-link">GitHub 源码</a>
+      </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-badge">✨ 基于 Tauri 2.0 + React 极致轻量开发</div>
+      <h1 class="hero-title">📌 PinDo 桌面悬浮待办便签</h1>
+      <p class="hero-desc">不占任务栏、常驻最上方、支持一键折叠胶囊与透明度调节。专为开发者与办公人群打造的极简随手记。</p>
+
+      <!-- Smart Download CTA -->
+      <div class="download-cta-box">
+        <a href="#" id="smart-download-btn" class="primary-btn">
+          <span id="btn-icon">⚡</span>
+          <span id="btn-text">获取 PinDo 最新版</span>
+          <span id="btn-badge" class="btn-badge">自动识别</span>
+        </a>
+        <p class="detected-os-tip" id="os-tip-text">正在识别您的操作系统...</p>
+      </div>
+
+      <!-- Preview Image -->
+      <div class="preview-showcase">
+        <img src="./preview.png" alt="PinDo 界面预览图" class="preview-frame">
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section" id="features">
+      <div class="section-header">
+        <h2 class="section-title">核心设计亮点</h2>
+        <p class="section-subtitle">专注、高效、零阻碍的桌面任务管理体验</p>
+      </div>
+
+      <div class="grid-3">
+        <div class="feature-card">
+          <div class="feature-icon">🚫</div>
+          <h3>无任务栏图标 (Skip Taskbar)</h3>
+          <p>完全隐藏在 Windows 系统任务栏及 Alt+Tab 列表中，不占用任务栏窗口空间，仅驻留托盘。</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">📌</div>
+          <h3>常驻置顶与防误触锁定</h3>
+          <p>始终悬浮在所有代码编辑器、浏览器上方。一键锁定后隐藏全部控件，防止误拖拽或误操作。</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">↕️</div>
+          <h3>一键折叠为迷你胶囊</h3>
+          <p>双击标题栏，瞬间收起为 42px 极简迷你栏（并显示今日未完成任务数），再次双击还原。</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🎚️</div>
+          <h3>透明度滑块与毛玻璃</h3>
+          <p>支持 30% ~ 100% 不透明度实时滑动调节，极佳的高颜值 Dark Glassmorphism 视觉呈现。</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">📝</div>
+          <h3>今日待办 & 明日计划</h3>
+          <p>支持任务紧急度标记（🔴/🟡/🔵）、完成打勾划线动画、双击文本内联编辑与“一键归档移至明日”。</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">💾</div>
+          <h3>SQLite 本地原生硬核存储</h3>
+          <p>使用 Tauri SQLite 原生插件存储数据，随写随存，零延迟持久化，重启电脑绝对不丢任务。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Download Section for All Platforms -->
+    <section class="download-section" id="download">
+      <div class="section-header">
+        <h2 class="section-title">全平台客户端下载</h2>
+        <p class="section-subtitle">支持 Windows 与 macOS (包含 Apple Silicon M 芯片与 Intel 芯片)</p>
+      </div>
+
+      <div class="download-grid">
+        <!-- Windows -->
+        <div class="download-card" id="card-win">
+          <div>
+            <div class="platform-title">🪟 Windows</div>
+            <p class="platform-desc">支持 Windows 10 / 11 (64位)</p>
+          </div>
+          <a href="https://github.com/your-username/PinDo/releases/latest" class="sub-btn" target="_blank">下载 .exe 安装包</a>
+        </div>
+
+        <!-- Mac M Series -->
+        <div class="download-card" id="card-mac-m">
+          <div>
+            <div class="platform-title">🍎 Mac M 芯片</div>
+            <p class="platform-desc">原生适配 M1 / M2 / M3 / M4 芯片</p>
+          </div>
+          <a href="https://github.com/your-username/PinDo/releases/latest" class="sub-btn" target="_blank">下载 .dmg (Arm64)</a>
+        </div>
+
+        <!-- Mac Intel -->
+        <div class="download-card" id="card-mac-intel">
+          <div>
+            <div class="platform-title">🍏 Mac Intel 芯片</div>
+            <p class="platform-desc">适用于 Intel 架构的 Mac 电脑</p>
+          </div>
+          <a href="https://github.com/your-username/PinDo/releases/latest" class="sub-btn" target="_blank">下载 .dmg (x64)</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <p>PinDo 极简悬浮便签 &copy; 2026 基于 <a href="https://github.com/your-username/PinDo" target="_blank">MIT License</a> 开源</p>
+    </footer>
+  </div>
+
+  <!-- Smart Platform Detection Script -->
+  <script>
+    (function detectPlatform() {
+      const ua = navigator.userAgent.toLowerCase();
+      const platform = navigator.platform.toLowerCase();
+      
+      const smartBtn = document.getElementById('smart-download-btn');
+      const btnText = document.getElementById('btn-text');
+      const btnIcon = document.getElementById('btn-icon');
+      const btnBadge = document.getElementById('btn-badge');
+      const osTip = document.getElementById('os-tip-text');
+
+      const GITHUB_RELEASES = "https://github.com/your-username/PinDo/releases/latest";
+
+      let isWin = ua.includes('win');
+      let isMac = ua.includes('mac') || platform.includes('mac');
+
+      if (isWin) {
+        btnIcon.textContent = '🪟';
+        btnText.textContent = '下载 Windows 版 (.exe)';
+        btnBadge.textContent = '推荐系统';
+        osTip.textContent = '已检测到您的系统为 Windows 64位';
+        smartBtn.href = GITHUB_RELEASES;
+        document.getElementById('card-win')?.classList.add('highlight');
+      } else if (isMac) {
+        // Detect Apple Silicon (M1/M2/M3) vs Intel
+        let isAppleSilicon = false;
+        try {
+          const canvas = document.createElement('canvas');
+          const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+          if (gl) {
+            const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+            const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL).toLowerCase();
+            if (renderer.includes('apple') || renderer.includes('m1') || renderer.includes('m2') || renderer.includes('m3') || renderer.includes('m4')) {
+              isAppleSilicon = true;
+            }
+          }
+        } catch (e) {}
+
+        if (isAppleSilicon) {
+          btnIcon.textContent = '🍎';
+          btnText.textContent = '下载 Mac 版 (M芯片 .dmg)';
+          btnBadge.textContent = 'Apple Silicon';
+          osTip.textContent = '已检测到您的系统为 macOS (M 系列芯片)';
+          smartBtn.href = GITHUB_RELEASES;
+          document.getElementById('card-mac-m')?.classList.add('highlight');
+        } else {
+          btnIcon.textContent = '🍏';
+          btnText.textContent = '下载 Mac 版 (Intel芯片 .dmg)';
+          btnBadge.textContent = 'Intel 芯片';
+          osTip.textContent = '已检测到您的系统为 macOS (Intel 芯片)';
+          smartBtn.href = GITHUB_RELEASES;
+          document.getElementById('card-mac-intel')?.classList.add('highlight');
+        }
+      } else {
+        btnIcon.textContent = '⚡';
+        btnText.textContent = '跳转至最新版本下载页';
+        btnBadge.textContent = '多平台支持';
+        osTip.textContent = '支持 Windows、Mac Intel 及 Apple Silicon 平台';
+        smartBtn.href = GITHUB_RELEASES;
+      }
+    })();
+  </script>
+</body>
+</html>
