@@ -3,10 +3,21 @@
 > 极简、常驻置顶、不占任务栏空间的桌面悬浮待办便签工具。
 
 <p align="center">
-  <img src="./docs/preview.png" alt="PinDo 悬浮界面预览" width="380" />
+  <a href="https://github.com/AuCf/pindo/stargazers"><img src="https://img.shields.io/github/stars/AuCf/pindo?style=for-the-badge&logo=github&color=38bdf8" alt="GitHub Stars"></a>
+  <a href="https://github.com/AuCf/pindo/network/members"><img src="https://img.shields.io/github/forks/AuCf/pindo?style=for-the-badge&logo=github&color=818cf8" alt="GitHub Forks"></a>
+  <a href="https://github.com/AuCf/pindo/releases"><img src="https://img.shields.io/github/downloads/AuCf/pindo/total?style=for-the-badge&logo=github&color=10b981" alt="GitHub Downloads"></a>
+  <a href="https://github.com/AuCf/pindo/blob/main/LICENSE"><img src="https://img.shields.io/github/license/AuCf/pindo?style=for-the-badge&color=f59e0b" alt="License"></a>
 </p>
 
-基于 **Tauri 2.0 + React 19 + SQLite** 开发，专为程序员、独立开发者与办公人群打造。随时随地记录今天任务、勾选进度、规划明日计划，不打扰主工作流。
+<p align="center">
+  🌐 <b>官方网站 & 智能离线下载</b>：<a href="https://aucf.github.io/pindo/" target="_blank">https://aucf.github.io/pindo/</a>
+</p>
+
+<p align="center">
+  <img src="./docs/preview.png" alt="PinDo 悬浮界面预览" width="380" style="border-radius: 18px; box-shadow: 0 20px 40px rgba(0,0,0,0.15);" />
+</p>
+
+基于 **Tauri 2.0 + React 19 + SQLite** 开发，专为程序员、独立开发者与办公人群打造。随手记、随时勾选今天任务、规划明天计划，不打扰主工作流。
 
 ---
 
@@ -16,7 +27,7 @@
 - 📌 **常驻置顶 (Always on Top)**：固定悬浮在所有应用（如 IDE、浏览器、文档）最上方，支持一键开关置顶。
 - 🔒 **锁定保护模式 (Lock Mode)**：一键锁定，隐去控制按键与拖拽响应，防止工作或输入代码时误触、误拖动。
 - ↕️ **一键折叠迷你胶囊 (Collapse Mode)**：双击标题栏或点击折叠按钮，窗口瞬间收起为 **42px 微型条**（并显示今日未完成数），再次双击即可展开。
-- 🎚️ **透明度调节 (Opacity Control)**：支持 30% ~ 100% 磨砂玻璃不透明度自由滑动调节。
+- 🎚️ **透明度调节 (Opacity Control)**：支持 30% ~ 100% 不透明度自由滑动调节。
 - 📝 **今日待办 (Today's Checklist)**：
   - 极简成就进度条（实时统计完成百分比与已完成数量）。
   - 支持紧急度标记（🔴紧急 / 🟡普通 / 🔵次要）。
@@ -30,68 +41,38 @@
 
 ---
 
-## 🛠️ 技术选型
+## 🛠️ 技术栈详情 (Tech Stack)
 
-- **后端/桌面壳**：[Tauri 2.0](https://tauri.app/) (Rust)
-  - 系统托盘组件 (`tauri::tray::TrayIconBuilder`)
-  - 原生 SQLite 插件 (`@tauri-apps/plugin-sql`)
-  - 开机自启插件 (`tauri-plugin-autostart`)
-- **前端框架**：[React 19](https://react.dev/) + [Vite](https://vitejs.dev/)
-- **图标库**：[Lucide React](https://lucide.dev/)
-- **设计语言**：Modern Glassmorphism (亚克力磨砂玻璃视效)
+| 层级 / 模块 | 技术选型 | 功能说明 |
+| :--- | :--- | :--- |
+| **桌面壳底层** | **Tauri 2.0 (Rust)** | 内存占用仅 30MB 左右，极速启动 |
+| **前端框架** | **React 19 + Vite 7** | 高性能 UI 交互与构建 |
+| **图标库** | **Lucide React** | 简洁现代图标组件 |
+| **数据库/存储** | **SQLite (`@tauri-apps/plugin-sql`)** | 本地原生硬核数据持久化 |
+| **系统集成** | **`tauri-plugin-autostart`** | Windows 开机自启驻留 |
+| **托盘组件** | **Tauri TrayIconBuilder** | 右下角系统托盘与右键菜单 |
+| **云端 CI/CD** | **GitHub Actions Matrix** | 自动并行编译 Windows、Mac Arm64 及 Mac x64 安装包 |
 
 ---
 
-## 🚀 快速开始
+## 📥 官网与全平台下载
 
-### 1. 环境准备
-确保你的电脑已安装：
-- [Node.js](https://nodejs.org/) (v18+)
-- [Rust & Cargo](https://www.rust-lang.org/)
-- Windows C++ Build Tools (VS C++ 生成工具)
+- 🌐 **PinDo 官方网页**：[https://aucf.github.io/pindo/](https://aucf.github.io/pindo/) （打开自动识别您的操作系统）
+- 📦 **GitHub Releases 最新发布**：[https://github.com/AuCf/pindo/releases/latest](https://github.com/AuCf/pindo/releases/latest)
 
-### 2. 安装依赖
+---
+
+## 🚀 快速本地开发
+
 ```bash
+# 1. 安装依赖
 npm install
-```
 
-### 3. 开发模式运行
-运行以下命令，会自动启动 Vite 前端服务并拉起 Tauri 桌面应用窗口：
-```bash
+# 2. 启动开发模式
 npm run tauri dev
-```
 
-### 4. 构建打包发布
-构建独立打包程序 (`.exe` 安装包/绿色版)：
-```bash
+# 3. 生产环境编译打包
 npm run tauri build
-```
-打包文件将存放在 `src-tauri/target/release/bundle/` 目录中。
-
----
-
-## 📁 项目结构
-
-```text
-fixNote/
-├── docs/
-│   └── preview.png          # README 预览效果图
-├── src/
-│   ├── assets/              # 静态资源
-│   ├── data/
-│   │   └── pindoDatabase.js # SQLite 数据库初始化与持久化逻辑
-│   ├── App.jsx              # 核心业务界面与应用状态管理
-│   ├── App.css              # Glassmorphic 样式与系统主题
-│   └── main.jsx             # React 入口文件
-├── src-tauri/
-│   ├── capabilities/        # Tauri 权限配置文件
-│   ├── src/
-│   │   ├── lib.rs           # 系统托盘、菜单与 Rust 插件注册
-│   │   └── main.rs          # Rust 程序入口
-│   ├── Cargo.toml           # Rust 依赖配置
-│   └── tauri.conf.json      # Tauri 窗口属性、skipTaskbar 与打包配置
-├── package.json
-└── README.md
 ```
 
 ---
