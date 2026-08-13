@@ -399,7 +399,7 @@ export default function App() {
   };
 
   const handleEditKeyDown = (event) => {
-    if (event.key === 'Enter') {
+    if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       saveTaskEdit();
     } else if (event.key === 'Escape') {
@@ -629,15 +629,17 @@ export default function App() {
                   placeholder="添加今天要完成的功能..."
                   className="task-input"
                 />
-                <select 
-                  value={todayPriority}
-                  onChange={(e) => setTodayPriority(e.target.value)}
-                  className={`priority-select ${todayPriority}`}
+                <button
+                  type="button"
+                  className="priority-toggle-btn no-drag"
+                  onClick={() => {
+                    const next = todayPriority === 'med' ? 'high' : todayPriority === 'high' ? 'low' : 'med';
+                    setTodayPriority(next);
+                  }}
+                  title={`优先级：${todayPriority === 'high' ? '🔴 紧急' : todayPriority === 'med' ? '🟡 普通' : '🔵 次要'} (点击切换)`}
                 >
-                  <option value="high">紧急</option>
-                  <option value="med">普通</option>
-                  <option value="low">次要</option>
-                </select>
+                  <span className={`priority-dot ${todayPriority}`}></span>
+                </button>
                 <button type="submit" className="add-btn">
                   <Plus size={16} />
                 </button>
@@ -653,7 +655,7 @@ export default function App() {
             ) : (
               <div className="task-list">
                 {todayTasks.map((task) => (
-                  <div key={task.id} className={`task-item ${task.completed ? 'completed' : ''}`}>
+                  <div key={task.id} className={`task-item priority-${task.priority} ${task.completed ? 'completed' : ''}`}>
                     <button
                       type="button"
                       className="custom-checkbox no-drag" 
@@ -665,62 +667,49 @@ export default function App() {
                     </button>
 
                     {editingTask?.list === 'today' && editingTask.id === task.id ? (
-                      <>
-                        <input
-                          autoFocus
-                          className="task-edit-input no-drag"
-                          value={editingTask.text}
-                          onChange={(event) => setEditingTask((current) => ({ ...current, text: event.target.value }))}
-                          onKeyDown={handleEditKeyDown}
-                          aria-label="编辑任务内容"
-                        />
-                        <div className="item-actions edit-actions no-drag">
-                          <button
-                            className="sm-icon-btn confirm"
-                            onClick={saveTaskEdit}
-                            disabled={!editingTask.text.trim()}
-                            title="保存"
-                          >
-                            <Check size={12} />
-                          </button>
-                          <button className="sm-icon-btn" onClick={cancelTaskEdit} title="取消">
-                            <X size={12} />
-                          </button>
-                        </div>
-                      </>
+                      <textarea
+                        autoFocus
+                        rows={1}
+                        className="task-edit-textarea no-drag"
+                        value={editingTask.text}
+                        onChange={(e) => {
+                          setEditingTask((current) => ({ ...current, text: e.target.value }));
+                          e.target.style.height = 'auto';
+                          e.target.style.height = e.target.scrollHeight + 'px';
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.height = 'auto';
+                          e.target.style.height = e.target.scrollHeight + 'px';
+                        }}
+                        onKeyDown={handleEditKeyDown}
+                        onBlur={saveTaskEdit}
+                        aria-label="编辑任务内容"
+                      />
                     ) : (
                       <>
                         <span
                           className="task-text editable"
                           onDoubleClick={() => startTaskEdit('today', task)}
-                          title={isLocked ? undefined : '双击编辑'}
+                          title={isLocked ? undefined : '双击编辑文本'}
                         >
                           {task.text}
                         </span>
-                        <span className={`priority-dot ${task.priority}`}></span>
 
                         {!isLocked && (
                           <div className="item-actions no-drag">
-                            <button
-                              className="sm-icon-btn"
-                              onClick={() => startTaskEdit('today', task)}
-                              title="编辑"
-                            >
-                              <Pencil size={12} />
-                            </button>
                             <button 
                               className="sm-icon-btn" 
                               onClick={() => moveTodayTaskToTomorrow(task)}
                               title="推迟至明日"
                             >
-                              <ArrowRight size={12} />
+                              <ArrowRight size={11} />
                             </button>
                             <button 
                               className="sm-icon-btn danger" 
                               onClick={() => deleteTodayTask(task.id)}
                               title="删除"
                             >
-                              <Trash2 size={12} />
+                              <Trash2 size={11} />
                             </button>
                           </div>
                         )}
@@ -758,15 +747,17 @@ export default function App() {
                   placeholder="预先列出明日的开发计划..."
                   className="task-input"
                 />
-                <select 
-                  value={tomorrowPriority}
-                  onChange={(e) => setTomorrowPriority(e.target.value)}
-                  className={`priority-select ${tomorrowPriority}`}
+                <button
+                  type="button"
+                  className="priority-toggle-btn no-drag"
+                  onClick={() => {
+                    const next = tomorrowPriority === 'med' ? 'high' : tomorrowPriority === 'high' ? 'low' : 'med';
+                    setTomorrowPriority(next);
+                  }}
+                  title={`优先级：${tomorrowPriority === 'high' ? '🔴 紧急' : tomorrowPriority === 'med' ? '🟡 普通' : '🔵 次要'} (点击切换)`}
                 >
-                  <option value="high">紧急</option>
-                  <option value="med">普通</option>
-                  <option value="low">次要</option>
-                </select>
+                  <span className={`priority-dot ${tomorrowPriority}`}></span>
+                </button>
                 <button type="submit" className="add-btn">
                   <Plus size={16} />
                 </button>
@@ -782,64 +773,51 @@ export default function App() {
             ) : (
               <div className="task-list">
                 {tomorrowTasks.map((task) => (
-                  <div key={task.id} className="task-item">
+                  <div key={task.id} className={`task-item priority-${task.priority} ${task.completed ? 'completed' : ''}`}>
                     {editingTask?.list === 'tomorrow' && editingTask.id === task.id ? (
-                      <>
-                        <input
-                          autoFocus
-                          className="task-edit-input no-drag"
-                          value={editingTask.text}
-                          onChange={(event) => setEditingTask((current) => ({ ...current, text: event.target.value }))}
-                          onKeyDown={handleEditKeyDown}
-                          aria-label="编辑任务内容"
-                        />
-                        <div className="item-actions edit-actions no-drag">
-                          <button
-                            className="sm-icon-btn confirm"
-                            onClick={saveTaskEdit}
-                            disabled={!editingTask.text.trim()}
-                            title="保存"
-                          >
-                            <Check size={12} />
-                          </button>
-                          <button className="sm-icon-btn" onClick={cancelTaskEdit} title="取消">
-                            <X size={12} />
-                          </button>
-                        </div>
-                      </>
+                      <textarea
+                        autoFocus
+                        rows={1}
+                        className="task-edit-textarea no-drag"
+                        value={editingTask.text}
+                        onChange={(e) => {
+                          setEditingTask((current) => ({ ...current, text: e.target.value }));
+                          e.target.style.height = 'auto';
+                          e.target.style.height = e.target.scrollHeight + 'px';
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.height = 'auto';
+                          e.target.style.height = e.target.scrollHeight + 'px';
+                        }}
+                        onKeyDown={handleEditKeyDown}
+                        onBlur={saveTaskEdit}
+                        aria-label="编辑任务内容"
+                      />
                     ) : (
                       <>
                         <span
                           className="task-text editable"
                           onDoubleClick={() => startTaskEdit('tomorrow', task)}
-                          title={isLocked ? undefined : '双击编辑'}
+                          title={isLocked ? undefined : '双击编辑文本'}
                         >
                           {task.text}
                         </span>
-                        <span className={`priority-dot ${task.priority}`}></span>
 
                         {!isLocked && (
                           <div className="item-actions no-drag">
-                            <button
-                              className="sm-icon-btn"
-                              onClick={() => startTaskEdit('tomorrow', task)}
-                              title="编辑"
-                            >
-                              <Pencil size={12} />
-                            </button>
                             <button 
                               className="sm-icon-btn" 
                               onClick={() => moveTomorrowTaskToToday(task)}
                               title="移至今日执行"
                             >
-                              <Sun size={12} />
+                              <Sun size={11} />
                             </button>
                             <button 
                               className="sm-icon-btn danger" 
                               onClick={() => deleteTomorrowTask(task.id)}
                               title="删除"
                             >
-                              <Trash2 size={12} />
+                              <Trash2 size={11} />
                             </button>
                           </div>
                         )}
