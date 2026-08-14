@@ -26,7 +26,8 @@ import {
   Sun,
   Pencil,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { initializePindoDatabase, persistPindoState } from './data/pindoDatabase';
 import './App.css';
@@ -34,6 +35,11 @@ import './App.css';
 const DEFAULT_TODAY_TASKS = [];
 const DEFAULT_TOMORROW_TASKS = [];
 const DEFAULT_NOTES = '';
+const DEFAULT_GROUPS = [
+  { id: 'default', name: '默认' },
+  { id: 'work', name: '工作' },
+  { id: 'personal', name: '个人' }
+];
 const DEFAULT_PREFERENCES = {
   activeTab: 'today',
   isAlwaysOnTop: true,
@@ -55,6 +61,17 @@ function loadTaskList(key, fallback) {
     return Array.isArray(parsed) ? parsed : fallback;
   } catch {
     return fallback;
+  }
+}
+
+function loadGroups() {
+  try {
+    const saved = localStorage.getItem('pindo_groups');
+    if (!saved) return DEFAULT_GROUPS;
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_GROUPS;
+  } catch {
+    return DEFAULT_GROUPS;
   }
 }
 
@@ -113,7 +130,8 @@ export default function App() {
     todayTasks: loadTaskList('pindo_today_tasks', DEFAULT_TODAY_TASKS),
     tomorrowTasks: loadTaskList('pindo_tomorrow_tasks', DEFAULT_TOMORROW_TASKS),
     notes: loadNotes(),
-    preferences: loadPreferences()
+    preferences: loadPreferences(),
+    groups: loadGroups()
   }));
   const initialPreferences = legacyState.preferences;
   const [isDatabaseReady, setIsDatabaseReady] = useState(false);
@@ -136,6 +154,13 @@ export default function App() {
   const [todayTasks, setTodayTasks] = useState(legacyState.todayTasks);
   const [tomorrowTasks, setTomorrowTasks] = useState(legacyState.tomorrowTasks);
   const [notes, setNotes] = useState(legacyState.notes);
+  const [groups, setGroups] = useState(legacyState.groups || DEFAULT_GROUPS);
+
+  // Grouping States
+  const [todayGroup, setTodayGroup] = useState('default');
+  const [tomorrowGroup, setTomorrowGroup] = useState('default');
+  const [newGroupName, setNewGroupName] = useState('');
+  const [collapsedGroups, setCollapsedGroups] = useState({});
 
   // Inputs
   const [todayInput, setTodayInput] = useState('');
@@ -159,6 +184,9 @@ export default function App() {
         setTodayTasks(storedState.todayTasks);
         setTomorrowTasks(storedState.tomorrowTasks);
         setNotes(storedState.notes);
+        if (Array.isArray(storedState.groups) && storedState.groups.length > 0) {
+          setGroups(storedState.groups);
+        }
         setActiveTab(preferences.activeTab);
         setIsAlwaysOnTop(preferences.isAlwaysOnTop);
         setIsLocked(preferences.isLocked);
@@ -198,24 +226,92 @@ export default function App() {
     }
   }, [initialPreferences.isAlwaysOnTop]);
 
-  // Persist state changes to SQLite after initial hydration.
+  // Persist state changes to SQLite & LocalStorage fallback
   useEffect(() => {
+    try {
+      localStorage.setItem('pindo_today_tasks', JSON.stringify(todayTasks));
+    } catch {}
     if (!isDatabaseReady) return;
     persistPindoState('todayTasks', todayTasks)
       .catch((error) => console.error('Failed to save today tasks:', error));
   }, [isDatabaseReady, todayTasks]);
 
   useEffect(() => {
+    try {
+      localStorage.setItem('pindo_tomorrow_tasks', JSON.stringify(tomorrowTasks));
+    } catch {}
     if (!isDatabaseReady) return;
     persistPindoState('tomorrowTasks', tomorrowTasks)
       .catch((error) => console.error('Failed to save tomorrow tasks:', error));
   }, [isDatabaseReady, tomorrowTasks]);
 
   useEffect(() => {
+    try {
+      localStorage.setItem('pindo_notes', notes);
+    } catch {}
     if (!isDatabaseReady) return;
     persistPindoState('notes', notes)
       .catch((error) => console.error('Failed to save notes:', error));
   }, [isDatabaseReady, notes]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pindo_groups', JSON.stringify(groups));
+    } catch {}
+    if (!isDatabaseReady) return;
+    persistPindoState('groups', groups)
+      .catch((error) => console.error('Failed to save groups:', error));
+  }, [isDatabaseReady, groups]);
+
+  const handleAddGroup = (e) => {
+    e.preventDefault();
+    const name = newGroupName.trim();
+    if (!name) return;
+    if (groups.some((g) => g.name === name)) {
+      setToast({ message: '已存在同名分组', type: 'error', id: Date.now() });
+      return;
+    }
+    const newGroup = { id: Date.now().toString(), name };
+    setGroups((current) => [...current, newGroup]);
+    setNewGroupName('');
+    setToast({ message: '分组已创建', type: 'success', id: Date.now() });
+  };
+
+  const handleDeleteGroup = (groupId) => {
+    if (groupId === 'default') return;
+    setGroups((current) => current.filter((g) => g.id !== groupId));
+    setTodayTasks((current) => current.map((t) => (t.groupId === groupId ? { ...t, groupId: 'default' } : t)));
+    setTomorrowTasks((current) => current.map((t) => (t.groupId === groupId ? { ...t, groupId: 'default' } : t)));
+    if (todayGroup === groupId) setTodayGroup('default');
+    if (tomorrowGroup === groupId) setTomorrowGroup('default');
+    setToast({ message: '分组已删除，关联任务已归入默认分组', type: 'success', id: Date.now() });
+  };
+
+  const toggleGroupCollapse = (groupId) => {
+    setCollapsedGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
+
+  const getGroupedTasks = (taskList) => {
+    const map = new Map();
+    groups.forEach((g) => map.set(g.id, { group: g, tasks: [] }));
+
+    const defaultGroup = groups.find((g) => g.id === 'default') || { id: 'default', name: '默认' };
+    if (!map.has('default')) map.set('default', { group: defaultGroup, tasks: [] });
+
+    taskList.forEach((task) => {
+      const gId = task.groupId && map.has(task.groupId) ? task.groupId : 'default';
+      map.get(gId).tasks.push(task);
+    });
+
+    const result = [];
+    map.forEach((val) => {
+      if (val.tasks.length > 0) {
+        result.push(val);
+      }
+    });
+
+    return result;
+  };
 
   useEffect(() => {
     if (!isDatabaseReady) return;
@@ -415,7 +511,8 @@ export default function App() {
       id: Date.now().toString(),
       text: todayInput.trim(),
       completed: false,
-      priority: todayPriority
+      priority: todayPriority,
+      groupId: todayGroup || 'default'
     };
     setTodayTasks((current) => [newTask, ...current]);
     setTodayInput('');
@@ -453,7 +550,8 @@ export default function App() {
     const newTask = {
       id: Date.now().toString(),
       text: tomorrowInput.trim(),
-      priority: tomorrowPriority
+      priority: tomorrowPriority,
+      groupId: tomorrowGroup || 'default'
     };
     setTomorrowTasks((current) => [newTask, ...current]);
     setTomorrowInput('');
@@ -629,6 +727,18 @@ export default function App() {
                   placeholder="添加今天要完成的功能..."
                   className="task-input"
                 />
+                {groups.length > 1 && (
+                  <select 
+                    value={todayGroup}
+                    onChange={(e) => setTodayGroup(e.target.value)}
+                    className="group-select no-drag"
+                    title="选择所属分组"
+                  >
+                    {groups.map((g) => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                )}
                 <button
                   type="button"
                   className="priority-toggle-btn no-drag"
@@ -654,69 +764,95 @@ export default function App() {
               </div>
             ) : (
               <div className="task-list">
-                {todayTasks.map((task) => (
-                  <div key={task.id} className={`task-item priority-${task.priority} ${task.completed ? 'completed' : ''}`}>
-                    <button
-                      type="button"
-                      className="custom-checkbox no-drag" 
-                      onClick={() => toggleTodayTask(task.id)}
-                      disabled={isLocked}
-                      aria-label={task.completed ? `将“${task.text}”标记为未完成` : `将“${task.text}”标记为已完成`}
-                    >
-                      {task.completed && <Check size={12} color="#fff" />}
-                    </button>
-
-                    {editingTask?.list === 'today' && editingTask.id === task.id ? (
-                      <textarea
-                        autoFocus
-                        rows={1}
-                        className="task-edit-textarea no-drag"
-                        value={editingTask.text}
-                        onChange={(e) => {
-                          setEditingTask((current) => ({ ...current, text: e.target.value }));
-                          e.target.style.height = 'auto';
-                          e.target.style.height = e.target.scrollHeight + 'px';
-                        }}
-                        onFocus={(e) => {
-                          e.target.style.height = 'auto';
-                          e.target.style.height = e.target.scrollHeight + 'px';
-                        }}
-                        onKeyDown={handleEditKeyDown}
-                        onBlur={saveTaskEdit}
-                        aria-label="编辑任务内容"
-                      />
-                    ) : (
-                      <>
-                        <span
-                          className="task-text editable"
-                          onDoubleClick={() => startTaskEdit('today', task)}
-                          title={isLocked ? undefined : '双击编辑文本'}
+                {getGroupedTasks(todayTasks).map(({ group, tasks: gTasks }) => {
+                  if (gTasks.length === 0) return null;
+                  const isCollapsed = !!collapsedGroups[group.id];
+                  const showHeader = groups.length > 1;
+                  return (
+                    <div key={group.id} className="group-section">
+                      {showHeader && (
+                        <div 
+                          className="group-header no-drag"
+                          onClick={() => toggleGroupCollapse(group.id)}
                         >
-                          {task.text}
-                        </span>
+                          <span className="group-chevron">
+                            {isCollapsed ? <ChevronRight size={11} /> : <ChevronDown size={11} />}
+                          </span>
+                          <span className="group-title">{group.name}</span>
+                          <span className="group-badge">{gTasks.length}</span>
+                        </div>
+                      )}
 
-                        {!isLocked && (
-                          <div className="item-actions no-drag">
-                            <button 
-                              className="sm-icon-btn" 
-                              onClick={() => moveTodayTaskToTomorrow(task)}
-                              title="推迟至明日"
-                            >
-                              <ArrowRight size={11} />
-                            </button>
-                            <button 
-                              className="sm-icon-btn danger" 
-                              onClick={() => deleteTodayTask(task.id)}
-                              title="删除"
-                            >
-                              <Trash2 size={11} />
-                            </button>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                ))}
+                      {!isCollapsed && (
+                        <div className="group-task-items">
+                          {gTasks.map((task) => (
+                            <div key={task.id} className={`task-item priority-${task.priority} ${task.completed ? 'completed' : ''}`}>
+                              <button
+                                type="button"
+                                className="custom-checkbox no-drag" 
+                                onClick={() => toggleTodayTask(task.id)}
+                                disabled={isLocked}
+                                aria-label={task.completed ? `将“${task.text}”标记为未完成` : `将“${task.text}”标记为已完成`}
+                              >
+                                {task.completed && <Check size={12} color="#fff" />}
+                              </button>
+
+                              {editingTask?.list === 'today' && editingTask.id === task.id ? (
+                                <textarea
+                                  autoFocus
+                                  rows={1}
+                                  className="task-edit-textarea no-drag"
+                                  value={editingTask.text}
+                                  onChange={(e) => {
+                                    setEditingTask((current) => ({ ...current, text: e.target.value }));
+                                    e.target.style.height = 'auto';
+                                    e.target.style.height = e.target.scrollHeight + 'px';
+                                  }}
+                                  onFocus={(e) => {
+                                    e.target.style.height = 'auto';
+                                    e.target.style.height = e.target.scrollHeight + 'px';
+                                  }}
+                                  onKeyDown={handleEditKeyDown}
+                                  onBlur={saveTaskEdit}
+                                  aria-label="编辑任务内容"
+                                />
+                              ) : (
+                                <>
+                                  <span
+                                    className="task-text editable"
+                                    onDoubleClick={() => startTaskEdit('today', task)}
+                                    title={isLocked ? undefined : '双击编辑文本'}
+                                  >
+                                    {task.text}
+                                  </span>
+
+                                  {!isLocked && (
+                                    <div className="item-actions no-drag">
+                                      <button 
+                                        className="sm-icon-btn" 
+                                        onClick={() => moveTodayTaskToTomorrow(task)}
+                                        title="推迟至明日"
+                                      >
+                                        <ArrowRight size={11} />
+                                      </button>
+                                      <button 
+                                        className="sm-icon-btn danger" 
+                                        onClick={() => deleteTodayTask(task.id)}
+                                        title="删除"
+                                      >
+                                        <Trash2 size={11} />
+                                      </button>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -747,6 +883,18 @@ export default function App() {
                   placeholder="预先列出明日的开发计划..."
                   className="task-input"
                 />
+                {groups.length > 1 && (
+                  <select 
+                    value={tomorrowGroup}
+                    onChange={(e) => setTomorrowGroup(e.target.value)}
+                    className="group-select no-drag"
+                    title="选择所属分组"
+                  >
+                    {groups.map((g) => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                )}
                 <button
                   type="button"
                   className="priority-toggle-btn no-drag"
@@ -772,59 +920,85 @@ export default function App() {
               </div>
             ) : (
               <div className="task-list">
-                {tomorrowTasks.map((task) => (
-                  <div key={task.id} className={`task-item priority-${task.priority} ${task.completed ? 'completed' : ''}`}>
-                    {editingTask?.list === 'tomorrow' && editingTask.id === task.id ? (
-                      <textarea
-                        autoFocus
-                        rows={1}
-                        className="task-edit-textarea no-drag"
-                        value={editingTask.text}
-                        onChange={(e) => {
-                          setEditingTask((current) => ({ ...current, text: e.target.value }));
-                          e.target.style.height = 'auto';
-                          e.target.style.height = e.target.scrollHeight + 'px';
-                        }}
-                        onFocus={(e) => {
-                          e.target.style.height = 'auto';
-                          e.target.style.height = e.target.scrollHeight + 'px';
-                        }}
-                        onKeyDown={handleEditKeyDown}
-                        onBlur={saveTaskEdit}
-                        aria-label="编辑任务内容"
-                      />
-                    ) : (
-                      <>
-                        <span
-                          className="task-text editable"
-                          onDoubleClick={() => startTaskEdit('tomorrow', task)}
-                          title={isLocked ? undefined : '双击编辑文本'}
+                {getGroupedTasks(tomorrowTasks).map(({ group, tasks: gTasks }) => {
+                  if (gTasks.length === 0) return null;
+                  const isCollapsed = !!collapsedGroups[group.id];
+                  const showHeader = groups.length > 1;
+                  return (
+                    <div key={group.id} className="group-section">
+                      {showHeader && (
+                        <div 
+                          className="group-header no-drag"
+                          onClick={() => toggleGroupCollapse(group.id)}
                         >
-                          {task.text}
-                        </span>
+                          <span className="group-chevron">
+                            {isCollapsed ? <ChevronRight size={11} /> : <ChevronDown size={11} />}
+                          </span>
+                          <span className="group-title">{group.name}</span>
+                          <span className="group-badge">{gTasks.length}</span>
+                        </div>
+                      )}
 
-                        {!isLocked && (
-                          <div className="item-actions no-drag">
-                            <button 
-                              className="sm-icon-btn" 
-                              onClick={() => moveTomorrowTaskToToday(task)}
-                              title="移至今日执行"
-                            >
-                              <Sun size={11} />
-                            </button>
-                            <button 
-                              className="sm-icon-btn danger" 
-                              onClick={() => deleteTomorrowTask(task.id)}
-                              title="删除"
-                            >
-                              <Trash2 size={11} />
-                            </button>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                ))}
+                      {!isCollapsed && (
+                        <div className="group-task-items">
+                          {gTasks.map((task) => (
+                            <div key={task.id} className={`task-item priority-${task.priority} ${task.completed ? 'completed' : ''}`}>
+                              {editingTask?.list === 'tomorrow' && editingTask.id === task.id ? (
+                                <textarea
+                                  autoFocus
+                                  rows={1}
+                                  className="task-edit-textarea no-drag"
+                                  value={editingTask.text}
+                                  onChange={(e) => {
+                                    setEditingTask((current) => ({ ...current, text: e.target.value }));
+                                    e.target.style.height = 'auto';
+                                    e.target.style.height = e.target.scrollHeight + 'px';
+                                  }}
+                                  onFocus={(e) => {
+                                    e.target.style.height = 'auto';
+                                    e.target.style.height = e.target.scrollHeight + 'px';
+                                  }}
+                                  onKeyDown={handleEditKeyDown}
+                                  onBlur={saveTaskEdit}
+                                  aria-label="编辑任务内容"
+                                />
+                              ) : (
+                                <>
+                                  <span
+                                    className="task-text editable"
+                                    onDoubleClick={() => startTaskEdit('tomorrow', task)}
+                                    title={isLocked ? undefined : '双击编辑文本'}
+                                  >
+                                    {task.text}
+                                  </span>
+
+                                  {!isLocked && (
+                                    <div className="item-actions no-drag">
+                                      <button 
+                                        className="sm-icon-btn" 
+                                        onClick={() => moveTomorrowTaskToToday(task)}
+                                        title="移至今日执行"
+                                      >
+                                        <Sun size={11} />
+                                      </button>
+                                      <button 
+                                        className="sm-icon-btn danger" 
+                                        onClick={() => deleteTomorrowTask(task.id)}
+                                        title="删除"
+                                      >
+                                        <Trash2 size={11} />
+                                      </button>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -910,6 +1084,42 @@ export default function App() {
               <span className="setting-status">
                 {isAlwaysOnTop ? '已启用' : '已关闭'}
               </span>
+            </div>
+
+            {/* Group Management Section */}
+            <div className="group-setting-section">
+              <div className="group-setting-title">分组管理</div>
+              <form onSubmit={handleAddGroup} className="add-group-form no-drag">
+                <input 
+                  type="text" 
+                  value={newGroupName} 
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  placeholder="添加新分组 (如: 工作 / 个人)..."
+                  className="group-name-input"
+                />
+                <button type="submit" className="add-group-btn" title="添加分组">
+                  <Plus size={13} />
+                </button>
+              </form>
+
+              <div className="groups-manager-list no-drag">
+                {groups.map((group) => (
+                  <div key={group.id} className="group-manager-item">
+                    <span className="group-manager-name">{group.name}</span>
+                    {group.id !== 'default' ? (
+                      <button 
+                        className="sm-icon-btn danger" 
+                        onClick={() => handleDeleteGroup(group.id)}
+                        title="删除分组 (组内任务转入默认分组)"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    ) : (
+                      <span className="group-tag-default">默认</span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

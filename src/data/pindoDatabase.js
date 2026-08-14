@@ -1,7 +1,7 @@
 import Database from '@tauri-apps/plugin-sql';
 
 const DATABASE_URL = 'sqlite:pindo.db';
-const STATE_KEYS = ['todayTasks', 'tomorrowTasks', 'notes', 'preferences'];
+const STATE_KEYS = ['todayTasks', 'tomorrowTasks', 'notes', 'preferences', 'groups'];
 
 let databasePromise;
 let writeQueue = Promise.resolve();

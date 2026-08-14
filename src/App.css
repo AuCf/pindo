@@ -333,6 +333,28 @@ textarea:focus-visible {
   box-shadow: 0 0 4px rgba(65, 127, 181, 0.4);
 }
 
+.group-select {
+  background: rgba(25, 28, 34, 0.04);
+  border: 1px solid rgba(25, 28, 34, 0.1);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  height: 22px;
+  padding: 0 2px;
+  outline: none;
+  cursor: pointer;
+  max-width: 52px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.group-select:hover {
+  background: rgba(25, 28, 34, 0.08);
+  border-color: rgba(25, 28, 34, 0.18);
+  color: var(--text-main);
+}
+
 .add-btn {
   width: 22px;
   height: 22px;
@@ -834,4 +856,140 @@ input:checked + .slider-round:before {
   .action-buttons {
     gap: 2px;
   }
+}
+
+/* Collapsible Group Sections in Task List */
+.group-section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 2px;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+.group-header:hover {
+  background: rgba(25, 28, 34, 0.04);
+  color: var(--text-main);
+}
+
+.group-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.group-title {
+  flex: 1;
+}
+
+.group-badge {
+  font-size: 10px;
+  font-weight: 500;
+  background: rgba(25, 28, 34, 0.07);
+  color: var(--text-muted);
+  padding: 1px 5px;
+  border-radius: 8px;
+}
+
+.group-task-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Group Management in Settings Modal */
+.group-setting-section {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(29, 32, 38, 0.12);
+}
+
+.group-setting-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+.add-group-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.group-name-input {
+  flex: 1;
+  height: 24px;
+  padding: 2px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+  color: var(--text-main);
+  outline: none;
+}
+
+.group-name-input:focus {
+  border-color: var(--accent-color);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.add-group-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: none;
+  background: #717d94;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.add-group-btn:hover {
+  background: #7d899f;
+}
+
+.groups-manager-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 110px;
+  overflow-y: auto;
+}
+
+.group-manager-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 8px;
+  background: rgba(25, 28, 34, 0.03);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--text-main);
+}
+
+.group-tag-default {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: rgba(25, 28, 34, 0.06);
+  padding: 1px 4px;
+  border-radius: 3px;
 }
