@@ -768,6 +768,11 @@ textarea:focus-visible {
   border-radius: 20px;
 }
 
+.switch input:disabled + .slider-round {
+  cursor: wait;
+  opacity: 0.55;
+}
+
 .slider-round:before {
   position: absolute;
   content: "";

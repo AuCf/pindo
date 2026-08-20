@@ -30,6 +30,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { initializePindoDatabase, persistPindoState } from './data/pindoDatabase';
+import { normalizeWindowPosition, restoreWindowPosition } from './window/windowPosition';
 import './App.css';
 
 const DEFAULT_TODAY_TASKS = [];
@@ -46,7 +47,9 @@ const DEFAULT_PREFERENCES = {
   isLocked: false,
   opacity: 85,
   isCollapsed: false,
-  expandedHeight: 520
+  expandedHeight: 520,
+  autoStartPreferenceSet: false,
+  windowPosition: null
 };
 
 const COLLAPSED_HEIGHT = 42;
@@ -100,7 +103,11 @@ function loadPreferences() {
       isCollapsed: typeof parsed.isCollapsed === 'boolean' ? parsed.isCollapsed : DEFAULT_PREFERENCES.isCollapsed,
       expandedHeight: Number.isFinite(parsed.expandedHeight)
         ? Math.max(MIN_EXPANDED_HEIGHT, parsed.expandedHeight)
-        : DEFAULT_PREFERENCES.expandedHeight
+        : DEFAULT_PREFERENCES.expandedHeight,
+      autoStartPreferenceSet: typeof parsed.autoStartPreferenceSet === 'boolean'
+        ? parsed.autoStartPreferenceSet
+        : DEFAULT_PREFERENCES.autoStartPreferenceSet,
+      windowPosition: normalizeWindowPosition(parsed.windowPosition)
     };
   } catch {
     return DEFAULT_PREFERENCES;
@@ -143,12 +150,19 @@ export default function App() {
   const [opacity, setOpacity] = useState(initialPreferences.opacity);
   const [isCollapsed, setIsCollapsed] = useState(initialPreferences.isCollapsed);
   const [expandedHeight, setExpandedHeight] = useState(initialPreferences.expandedHeight);
+  const [autoStartPreferenceSet, setAutoStartPreferenceSet] = useState(initialPreferences.autoStartPreferenceSet);
+  const [windowPosition, setWindowPosition] = useState(initialPreferences.windowPosition);
   const [showOpacitySlider, setShowOpacitySlider] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [autoStartEnabled, setAutoStartEnabled] = useState(false);
+  const [isAutostartReady, setIsAutostartReady] = useState(false);
   const [toast, setToast] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
   const hasAppliedCollapsedSize = useRef(false);
+  const autostartInitialization = useRef(null);
+  const windowPositionInitialization = useRef(null);
+  const storedWindowPosition = useRef(initialPreferences.windowPosition);
+  const userDragExpiresAt = useRef(0);
 
   // Data States (SQLite, with one-time LocalStorage migration)
   const [todayTasks, setTodayTasks] = useState(legacyState.todayTasks);
@@ -193,6 +207,10 @@ export default function App() {
         setOpacity(preferences.opacity);
         setIsCollapsed(preferences.isCollapsed);
         setExpandedHeight(preferences.expandedHeight);
+        setAutoStartPreferenceSet(preferences.autoStartPreferenceSet);
+        const restoredPosition = normalizeWindowPosition(preferences.windowPosition);
+        storedWindowPosition.current = restoredPosition;
+        setWindowPosition(restoredPosition);
         setIsDatabaseReady(true);
       })
       .catch((error) => {
@@ -204,7 +222,7 @@ export default function App() {
     };
   }, [legacyState]);
 
-  // Initialize Window & Autostart
+  // Initialize Window
   useEffect(() => {
     try {
       const win = getCurrentWindow();
@@ -216,15 +234,96 @@ export default function App() {
           console.error('Failed to restore always-on-top setting:', error);
           setToast({ message: '窗口置顶初始化失败', type: 'error', id: Date.now() });
         });
-
-      // Initialize autostart check
-      isAutostartEnabled()
-        .then((enabled) => setAutoStartEnabled(enabled))
-        .catch((error) => console.error('Failed to read autostart setting:', error));
     } catch (e) {
       console.log('Running outside Tauri environment or window init issue');
     }
   }, [initialPreferences.isAlwaysOnTop]);
+
+  // Enable autostart by default once, while respecting later user changes.
+  useEffect(() => {
+    if (!isDatabaseReady) return;
+
+    if (!autostartInitialization.current) {
+      autostartInitialization.current = (async () => {
+        const enabled = await isAutostartEnabled();
+
+        if (!autoStartPreferenceSet && !enabled) {
+          await enableAutostart();
+          setAutoStartEnabled(true);
+        } else {
+          setAutoStartEnabled(enabled);
+        }
+
+        if (!autoStartPreferenceSet) {
+          setAutoStartPreferenceSet(true);
+        }
+      })().catch((error) => {
+        console.error('Failed to initialize autostart setting:', error);
+        setToast({ message: '开机自启动初始化失败', type: 'error', id: Date.now() });
+      }).finally(() => {
+        setIsAutostartReady(true);
+      });
+    }
+  }, [autoStartPreferenceSet, isDatabaseReady]);
+
+  // Restore the last reachable position, then remember later user moves.
+  useEffect(() => {
+    if (!appWindow || !isDatabaseReady) return undefined;
+
+    if (!windowPositionInitialization.current) {
+      windowPositionInitialization.current = (async () => {
+        const restoredPosition = await restoreWindowPosition(appWindow, storedWindowPosition.current);
+
+        if (restoredPosition) return restoredPosition;
+
+        const initialPosition = normalizeWindowPosition(await appWindow.outerPosition());
+        if (initialPosition) {
+          storedWindowPosition.current = initialPosition;
+          setWindowPosition(initialPosition);
+        }
+
+        return null;
+      })().catch((error) => {
+        console.error('Failed to restore window position:', error);
+        return null;
+      });
+    }
+
+    let disposed = false;
+    let unlisten = null;
+    let saveTimer = null;
+
+    windowPositionInitialization.current.then(async () => {
+      if (disposed) return;
+
+      const stopListening = await appWindow.onMoved(({ payload }) => {
+        const nextPosition = normalizeWindowPosition(payload);
+        if (!nextPosition) return;
+
+        const now = Date.now();
+        if (now > userDragExpiresAt.current) return;
+        userDragExpiresAt.current = now + 5000;
+
+        if (saveTimer) window.clearTimeout(saveTimer);
+        saveTimer = window.setTimeout(() => {
+          storedWindowPosition.current = nextPosition;
+          setWindowPosition(nextPosition);
+        }, 180);
+      });
+
+      if (disposed) {
+        stopListening();
+      } else {
+        unlisten = stopListening;
+      }
+    }).catch((error) => console.error('Failed to listen for window movement:', error));
+
+    return () => {
+      disposed = true;
+      if (saveTimer) window.clearTimeout(saveTimer);
+      if (unlisten) unlisten();
+    };
+  }, [appWindow, isDatabaseReady]);
 
   // Persist state changes to SQLite & LocalStorage fallback
   useEffect(() => {
@@ -321,9 +420,11 @@ export default function App() {
       isLocked,
       opacity,
       isCollapsed,
-      expandedHeight
+      expandedHeight,
+      autoStartPreferenceSet,
+      windowPosition
     }).catch((error) => console.error('Failed to save preferences:', error));
-  }, [activeTab, expandedHeight, isAlwaysOnTop, isCollapsed, isDatabaseReady, isLocked, opacity]);
+  }, [activeTab, autoStartPreferenceSet, expandedHeight, isAlwaysOnTop, isCollapsed, isDatabaseReady, isLocked, opacity, windowPosition]);
 
   useEffect(() => {
     if (!appWindow || !isDatabaseReady) return;
@@ -386,11 +487,14 @@ export default function App() {
   };
 
   const handleHeaderMouseDown = async (event) => {
-    if (event.button !== 0 || event.detail > 1 || event.target.closest('.no-drag')) return;
+    if (!appWindow || event.button !== 0 || event.detail > 1 || event.target.closest('.no-drag')) return;
+
+    userDragExpiresAt.current = Date.now() + 5000;
 
     try {
-      await appWindow?.startDragging();
+      await appWindow.startDragging();
     } catch (error) {
+      userDragExpiresAt.current = 0;
       console.error('Failed to start window dragging:', error);
       setToast({ message: '窗口拖动失败', type: 'error', id: Date.now() });
     }
@@ -441,19 +545,26 @@ export default function App() {
   };
 
   const toggleAutostart = async () => {
+    if (!isAutostartReady) return;
+    setIsAutostartReady(false);
+
     try {
       if (autoStartEnabled) {
         await disableAutostart();
         setAutoStartEnabled(false);
+        setAutoStartPreferenceSet(true);
         setToast({ message: '已关闭开机自启动', type: 'success', id: Date.now() });
       } else {
         await enableAutostart();
         setAutoStartEnabled(true);
+        setAutoStartPreferenceSet(true);
         setToast({ message: '已开启开机自启动', type: 'success', id: Date.now() });
       }
     } catch (e) {
       console.error('Failed to toggle autostart:', e);
       setToast({ message: '开机自启动设置失败', type: 'error', id: Date.now() });
+    } finally {
+      setIsAutostartReady(true);
     }
   };
 
@@ -1056,12 +1167,13 @@ export default function App() {
             <div className="setting-row">
               <div>
                 <div>开机自启动</div>
-                <div className="setting-sub">系统启动时自动驻留桌面/托盘</div>
+                <div className="setting-sub">系统启动时自动显示窗口并驻留托盘</div>
               </div>
               <label className="switch">
                 <input 
                   type="checkbox" 
                   checked={autoStartEnabled}
+                  disabled={!isAutostartReady}
                   onChange={toggleAutostart}
                 />
                 <span className="slider-round"></span>
